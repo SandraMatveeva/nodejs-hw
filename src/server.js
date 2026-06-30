@@ -1,8 +1,10 @@
 import express from "express";
 import cors from "cors";
 import 'dotenv/config';
+import pinoHttp from "pino-http";
 
 const app = express();
+const PORT = Number(process.env.PORT) || 3000;
 
 
 app.use(
@@ -13,6 +15,15 @@ app.use(
 );
 
 app.use(express.json());
+
+app.use(
+  pinoHttp({
+    transport:
+      process.env.NODE_ENV === "production"
+        ? undefined
+        : { target: "pino-pretty" },
+  }),
+);
 
 app.get("/notes", (req, res) => {
     console.log("Get notes controller");
@@ -47,8 +58,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server is running on localhost: ${process.env.PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on localhost: ${PORT}`);
 });
 
 

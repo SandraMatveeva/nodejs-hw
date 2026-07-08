@@ -9,6 +9,6 @@ export const errorHandler = (err, req, res, next) => {
     });
    }
   res.status(500).json({
-    message: isProd ? "😩 Oops something went wrong " : err.stack,
+    message: isProd ? "😩 Oops something went wrong " : err.message,
   });
 };

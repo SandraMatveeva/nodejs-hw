@@ -49,10 +49,9 @@ export const getNoteById = async (req, res) => {
 
 export const createNote = async (req, res) => {
   console.log('CONTROLLER -> createNote');
-
-  // const note = await Note.create(req.body);
+  const note = await Note.create(req.body);
+  res.status(201).json(note);
   // res.status(201).json(note);
-  res.status(201).json({});
 };
 
 export const deleteNote = async (req, res) => {

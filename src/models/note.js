@@ -30,6 +30,7 @@ const noteSchema = new Schema(
 
 noteSchema.index({
   tag: 1,
+  userId: 1,
 });
 
 export const Note = model('Note', noteSchema);

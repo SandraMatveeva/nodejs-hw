@@ -2,7 +2,7 @@ import createHttpError from 'http-errors';
 import { User } from '../models/user.js';
 import bcrypt from 'bcrypt';
 // import crypto from 'node:crypto';
-import { createSession, setSessionCoockies } from '../services/auth.js';
+import { createSession, setSessionCookies } from '../services/auth.js';
 import { Session } from '../models/session.js';
 
 export const registerUser = async (req, res) => {
@@ -20,7 +20,7 @@ export const registerUser = async (req, res) => {
   });
 
   const newSession = await createSession(user._id);
-  setSessionCoockies(res, newSession);
+  setSessionCookies(res, newSession);
   res.status(201).json(user);
 };
 
@@ -43,13 +43,13 @@ export const loginUser = async (req, res) => {
   });
 
   const newSession = await createSession(user._id);
-  setSessionCoockies(res, newSession);
-  res.status(201).json(user);
+  setSessionCookies(res, newSession);
+  // res.status(201).json(user);
 
   res.status(200).json(user);
 };
 
-export const logOutUser = async (req, res) => {
+export const logoutUser = async (req, res) => {
 if (req.cookies.sessionId) {
   await Session.deleteOne({_id: req.cookies.sessionId});
 }
@@ -65,7 +65,7 @@ res.status(204).send();
 export const refreshUserSession = async (req, res) => {
   const {sessionId, refreshToken} = req.cookies;
 
-  if (!sessionId, !refreshToken) {
+  if (!sessionId || !refreshToken) {
     throw createHttpError(401, "Missing tokens");
   }
 
@@ -75,7 +75,7 @@ export const refreshUserSession = async (req, res) => {
   });
 
   if (!session) {
-    throw createHttpError(400, "Session not found");
+    throw createHttpError(401, "Session not found");
   }
 
 const isRefreshTokenExpired = session.refreshTokenValidUntil < new Date ();
@@ -90,7 +90,7 @@ if (isRefreshTokenExpired) {
 await session.deleteOne();
 
 const newSession = await createSession(session.userId);
-setSessionCoockies(res, newSession);
+setSessionCookies(res, newSession);
 
   res.status(200).json({
       message: "Session refreshed",

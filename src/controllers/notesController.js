@@ -4,7 +4,9 @@ import createHttpError from 'http-errors';
 export const getAllNotes = async (req, res) => {
   const { page = 1, perPage = 3, tag, search = '' } = req.query;
   const skip = (page - 1) * perPage;
-  console.log('fff', tag);
+  // console.log('fff', tag);
+
+  req.user;
 
   const notesQuery = Note.find();
 

@@ -12,7 +12,7 @@ export const saveFileToCloudinary = async (buffer, userId) => {
     folder: 'users-app/avatars',
     resource_type: 'image',
     public_id: `avatar_${userId}`,
-    owerwrite: true,
+    overwrite: true,
     unique_filename: false,
     transformation: [
       {width: 500, height: 500, gravity: "auto"},
@@ -21,12 +21,12 @@ export const saveFileToCloudinary = async (buffer, userId) => {
   };
 
   return new Promise((resolve, reject) => {
-     const uploadSrteam = cloudinary.uploader.upload_stream(options, (error, result) => {
+     const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
       if (error) {
         return reject(error);
       }
       resolve(result);
     });
-    uploadSrteam.end(buffer);
+    uploadStream.end(buffer);
   });
 };

@@ -8,6 +8,10 @@ import { sendEmail } from '../utils/sendMail.js';
 import jwt from 'jsonwebtoken';
 // import { json } from 'express';
 
+import handlebars from 'handlebars';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+
 export const registerUser = async (req, res) => {
   const existingUser = await User.findOne({ email: req.body.email });
   if (existingUser) {
@@ -114,14 +118,27 @@ export const requestResetEmail = async (req, res) => {
   );
   console.log(token);
 
-  const frontEndUrl = `my-app.com/reset-pwd?token=${token}`;
+  // const frontEndUrl = `my-app.com/reset-password?token=${token}`;
+
+
+  const templatePath = path.resolve('src/templates/reset-password-email.html');
+  // 2. Читаємо шаблон
+  const templateSource = await fs.readFile(templatePath, 'utf-8');
+  // 3. Готуємо шаблон до заповнення
+  const template = handlebars.compile(templateSource);
+  // 4. Формуємо із шаблона HTML документ з динамічними даними
+  const html = template({
+    name: user.username,
+    link: `${process.env.FRONTEND_DOMAIN}/reset-password?token=${token}`,
+  });
+
 
   try {
     await sendEmail({
       from: process.env.SMTP_FROM,
       to: req.body.email,
       subject: 'Reset your password',
-      html: `<p>Click <a href="${frontEndUrl}">here</a> to reset your password<p/>`,
+      html,
     });
   } catch {
     throw createHttpError(500, 'Something went wrong please try again later');

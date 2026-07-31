@@ -1,0 +1,32 @@
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
+
+export const saveFileToCloudinary = async (buffer, userId) => {
+  const options = {
+    folder: 'users-app/avatars',
+    resource_type: 'image',
+    public_id: `avatar_${userId}`,
+    owerwrite: true,
+    unique_filename: false,
+    transformation: [
+      {width: 500, height: 500, gravity: "auto"},
+      {fetch_format: "auto", quality: "auto"},
+    ]
+  };
+
+  return new Promise((resolve, reject) => {
+     const uploadSrteam = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) {
+        return reject(error);
+      }
+      resolve(result);
+    });
+    uploadSrteam.end(buffer);
+  });
+};

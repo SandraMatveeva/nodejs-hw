@@ -4,6 +4,9 @@ import bcrypt from 'bcrypt';
 // import crypto from 'node:crypto';
 import { createSession, setSessionCookies } from '../services/auth.js';
 import { Session } from '../models/session.js';
+import { sendEmail } from '../utils/sendMail.js';
+import jwt from 'jsonwebtoken';
+// import { json } from 'express';
 
 export const registerUser = async (req, res) => {
   const existingUser = await User.findOne({ email: req.body.email });
@@ -50,49 +53,104 @@ export const loginUser = async (req, res) => {
 };
 
 export const logoutUser = async (req, res) => {
-if (req.cookies.sessionId) {
-  await Session.deleteOne({_id: req.cookies.sessionId});
-}
+  if (req.cookies.sessionId) {
+    await Session.deleteOne({ _id: req.cookies.sessionId });
+  }
 
-res.clearCookie("accessToken");
-res.clearCookie("refreshToken");
-res.clearCookie("sessionId");
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
+  res.clearCookie('sessionId');
 
-res.status(204).send();
+  res.status(204).send();
 };
 
-
 export const refreshUserSession = async (req, res) => {
-  const {sessionId, refreshToken} = req.cookies;
+  const { sessionId, refreshToken } = req.cookies;
 
   if (!sessionId || !refreshToken) {
-    throw createHttpError(401, "Missing tokens");
+    throw createHttpError(401, 'Missing tokens');
   }
 
   const session = await Session.findOne({
-    _id:sessionId,
+    _id: sessionId,
     refreshToken,
   });
 
   if (!session) {
-    throw createHttpError(401, "Session not found");
+    throw createHttpError(401, 'Session not found');
   }
 
-const isRefreshTokenExpired = session.refreshTokenValidUntil < new Date ();
-if (isRefreshTokenExpired) {
+  const isRefreshTokenExpired = session.refreshTokenValidUntil < new Date();
+  if (isRefreshTokenExpired) {
+    await session.deleteOne();
+    res.clearCookie('sessionId');
+    res.clearCookie('refreshToken');
+    res.clearCookie('accessToken');
+    throw createHttpError(401, 'Session token expired');
+  }
+
   await session.deleteOne();
-  res.clearCookie("sessionId");
-  res.clearCookie("refreshToken");
-  res.clearCookie("accessToken");
-  throw createHttpError(401, "Session token expired");
-}
 
-await session.deleteOne();
-
-const newSession = await createSession(session.userId);
-setSessionCookies(res, newSession);
+  const newSession = await createSession(session.userId);
+  setSessionCookies(res, newSession);
 
   res.status(200).json({
-      message: "Session refreshed",
+    message: 'Session refreshed',
+  });
+};
+
+export const requestResetEmail = async (req, res) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    return res.status(200).json({
+      message: 'Password reset email sent successfully',
+    });
+  }
+
+  const token = jwt.sign(
+    { email: req.body.email, sub: user._id },
+    process.env.JWT_SECRET,
+    { expiresIn: '15 m' },
+  );
+  console.log(token);
+
+  const frontEndUrl = `my-app.com/reset-pwd?token=${token}`;
+
+  try {
+    await sendEmail({
+      from: process.env.SMTP_FROM,
+      to: req.body.email,
+      subject: 'Reset your password',
+      html: `<p>Click <a href="${frontEndUrl}">here</a> to reset your password<p/>`,
+    });
+  } catch {
+    throw createHttpError(500, 'Something went wrong please try again later');
+  }
+
+  res.status(200).json({});
+};
+
+export const resetPassword = async (req, res) => {
+  const { password, token } = req.body;
+  console.log(password, token);
+
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    throw createHttpError(401, 'Invalid or expired token');
+  }
+
+  const user = await User.findOne({ _id: payload.sub, email: payload.email });
+  if (!user) {
+    throw createHttpError(404, 'User not found');
+  }
+  const hashePassword = await bcrypt.hash(req.body.password, 10);
+  await User.updateOne({ _id: user._id }, { password: hashePassword });
+
+  await Session.deleteMany({ userId: user._id });
+
+  res.status(200).json({
+    message: 'Password reset successfull',
   });
 };
